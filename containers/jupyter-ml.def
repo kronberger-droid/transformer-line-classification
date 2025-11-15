@@ -13,6 +13,9 @@ From: jupyter/minimal-notebook:latest
     
     # Install Python packages (all on fewer lines to avoid issues)
     pip install --no-cache-dir \
+        jupyterhub==3.1.1 \
+        nbclassic==0.3.7 \
+        batchspawner \
         jupyter ipykernel ipywidgets notebook jupyterlab \
         torch torchvision \
         numpy scipy pandas h5py \
@@ -20,9 +23,6 @@ From: jupyter/minimal-notebook:latest
         scikit-learn \
         python-lsp-server black isort flake8 \
         tqdm
-
-    # Enable jupyter widgets
-    jupyter nbextension enable --py widgetsnbextension --sys-prefix
 
 %environment
     export LC_ALL=C.UTF-8

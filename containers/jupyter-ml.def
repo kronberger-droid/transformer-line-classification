@@ -1,22 +1,21 @@
 Bootstrap: docker
-From: jupyter/minimal-notebook:latest
+From: jupyter/datascience-notebook:hub-3.1.1
 
 %post
-    # Update and install system dependencies
-    apt-get update && apt-get install -y \
-        build-essential \
-        git \
-        curl \
-        wget \
-        vim \
-        && rm -rf /var/lib/apt/lists/*
-    
-    # Install Python packages (all on fewer lines to avoid issues)
-    pip install --no-cache-dir \
+    # Install REQUIRED JupyterHub packages with specific versions for ASC cluster
+    /opt/conda/bin/pip install --no-cache-dir \
         jupyterhub==3.1.1 \
         nbclassic==0.3.7 \
-        batchspawner \
-        jupyter ipykernel ipywidgets notebook jupyterlab \
+        git+https://github.com/katringoogoo/batchspawner.git@1.2.0+auth_fix
+
+    # Install JupyterLab extensions (optional but recommended)
+    /opt/conda/bin/pip install --no-cache-dir \
+        jupyterlab-system-monitor \
+        jupyterlab-git \
+        jupyterlab-widgets
+
+    # Install your custom ML/scientific packages
+    /opt/conda/bin/pip install --no-cache-dir \
         torch torchvision \
         numpy scipy pandas h5py \
         matplotlib seaborn plotly \
@@ -28,9 +27,6 @@ From: jupyter/minimal-notebook:latest
     export LC_ALL=C.UTF-8
     export LANG=C.UTF-8
 
-%runscript
-    exec jupyter lab --ip=0.0.0.0 --no-browser
-
 %labels
-    Author martin@gmx.at
+    Author kronberger@iap.tuwien.ac.at
     Version v1.0

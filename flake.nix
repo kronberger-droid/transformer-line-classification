@@ -83,7 +83,8 @@
             mkdir -p .jupyter/data
 
             # Ensure CUDA is available if installed
-            # export LD_LIBRARY_PATH=${pkgs.linuxPackages.nvidia_x11}/lib:${pkgs.cudaPackages.cudatoolkit}/lib:$LD_LIBRARY_PATH
+            # Uncomment and configure the line below if you need CUDA support
+            # export LD_LIBRARY_PATH=<path-to-nvidia>:<path-to-cuda>:$LD_LIBRARY_PATH
           '';
         };
 

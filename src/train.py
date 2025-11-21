@@ -17,7 +17,6 @@ import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 from sklearn.metrics import roc_auc_score, balanced_accuracy_score, confusion_matrix
 from sklearn.model_selection import train_test_split
-from tqdm.auto import tqdm
 
 # Set matplotlib backend for non-interactive plotting
 import matplotlib
@@ -62,7 +61,13 @@ def parse_args():
         "--data-path",
         type=str,
         default="data/processed_data.npz",
-        help="Path to dataset",
+        help="Path to dataset (default: data/processed_data.npz)",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="Dataset name (alternative to --data-path, looks in data/<dataset>.npz)",
     )
     parser.add_argument(
         "--min-lines", type=int, default=10, help="Minimum number of lines"
@@ -75,6 +80,9 @@ def parse_args():
     )
     parser.add_argument(
         "--output-dir", type=str, default="outputs", help="Output directory"
+    )
+    parser.add_argument(
+        "--model-dir", type=str, default=None, help="Model output directory (default: <output-dir>/models)"
     )
     parser.add_argument("--resume", action="store_true", help="Resume from checkpoint")
     parser.add_argument("--seed", type=int, default=42, help="Random seed")
@@ -450,7 +458,7 @@ class VisionTransformer(nn.Module):
         return logits
 
 
-def train_epoch(model, loader, criterion, optimizer, device):
+def train_epoch(model, loader, criterion, optimizer, device, log_interval=50):
     """
     Train the model for one epoch.
 
@@ -464,6 +472,7 @@ def train_epoch(model, loader, criterion, optimizer, device):
         criterion: Loss function (typically CrossEntropyLoss)
         optimizer: Optimizer for updating model parameters
         device: Device to run computations on (CPU or CUDA)
+        log_interval: Print progress every N batches
 
     Returns:
         Tuple of (average_loss, accuracy) for the epoch
@@ -472,9 +481,9 @@ def train_epoch(model, loader, criterion, optimizer, device):
     total_loss = 0
     correct = 0
     total = 0
+    num_batches = len(loader)
 
-    pbar = tqdm(loader, desc="Training")
-    for batch in pbar:
+    for batch_idx, batch in enumerate(loader):
         # Move data to the appropriate device (CPU/GPU)
         images = batch["images"].to(device)
         labels = batch["labels"].to(device)
@@ -498,10 +507,9 @@ def train_epoch(model, loader, criterion, optimizer, device):
         correct += (predictions == labels).sum().item()
         total += labels.size(0)
 
-        # Update progress bar with current metrics
-        pbar.set_postfix(
-            {"loss": f"{loss.item():.4f}", "acc": f"{correct / total:.4f}"}
-        )
+        # Print progress at intervals
+        if (batch_idx + 1) % log_interval == 0 or (batch_idx + 1) == num_batches:
+            print(f"  Batch {batch_idx + 1}/{num_batches} - Loss: {loss.item():.4f}, Acc: {correct / total:.4f}", flush=True)
 
     # Return average loss and accuracy for the epoch
     return total_loss / len(loader), correct / total
@@ -533,8 +541,9 @@ def evaluate(model, loader, criterion, device):
     all_probs = []
 
     # Disable gradient computation for efficiency and to prevent memory issues
+    num_batches = len(loader)
     with torch.no_grad():
-        for batch in tqdm(loader, desc="Evaluating"):
+        for batch_idx, batch in enumerate(loader):
             # Move data to device
             images = batch["images"].to(device)
             labels = batch["labels"].to(device)
@@ -554,6 +563,10 @@ def evaluate(model, loader, criterion, device):
             all_labels.extend(labels.cpu().numpy())
             all_preds.extend(preds.cpu().numpy())
             all_probs.extend(probs.cpu().numpy())
+
+            # Print progress
+            if (batch_idx + 1) % 50 == 0 or (batch_idx + 1) == num_batches:
+                print(f"  Eval batch {batch_idx + 1}/{num_batches}", flush=True)
 
     # Convert lists to numpy arrays for sklearn metrics
     all_labels = np.array(all_labels)
@@ -628,6 +641,16 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(exist_ok=True, parents=True)
 
+    # Create model directory
+    model_dir = Path(args.model_dir) if args.model_dir else output_dir / "models"
+    model_dir.mkdir(exist_ok=True, parents=True)
+
+    # Resolve dataset path
+    if args.dataset:
+        data_path = Path(f"data/{args.dataset}.npz")
+    else:
+        data_path = Path(args.data_path)
+
     # Setup logging to both console and file
     log_file = output_dir / f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 
@@ -671,8 +694,8 @@ def main():
     # ============================================================================
 
     # Load the preprocessed dataset (NPZ format containing images and labels)
-    log(f"Loading dataset from {args.data_path}...")
-    data = np.load(args.data_path)
+    log(f"Loading dataset from {data_path}...")
+    data = np.load(data_path)
     all_images = data[data.files[0]]  # STM images as numpy array
     all_labels = data[data.files[1]]  # Corresponding class labels
 
@@ -799,7 +822,7 @@ def main():
     }
 
     # Check if we should resume from a previous checkpoint
-    checkpoint_path = output_dir / "best_model.pt"
+    checkpoint_path = model_dir / "best_model.pt"
     if args.resume and checkpoint_path.exists():
         log(f"Resuming from checkpoint: {checkpoint_path}")
         checkpoint = torch.load(checkpoint_path, map_location=device)
@@ -914,7 +937,7 @@ def main():
     }
 
     # Save config as JSON for easy inspection
-    with open(output_dir / "model_config.json", "w") as f:
+    with open(model_dir / "model_config.json", "w") as f:
         json.dump(model_config, f, indent=2)
 
     # ---- Save Final Model ----
@@ -927,10 +950,11 @@ def main():
             "best_val_auroc": best_val_auroc,
             "history": history,
         },
-        output_dir / "final_model.pt",
+        model_dir / "final_model.pt",
     )
 
     log(f"All outputs saved to: {output_dir}")
+    log(f"Models saved to: {model_dir}")
     log("Done!")
 
 

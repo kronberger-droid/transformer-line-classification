@@ -1,0 +1,13 @@
+[2025-11-21 17:38:02] ================================================================================
+[2025-11-21 17:38:02] Starting Training
+[2025-11-21 17:38:02] ================================================================================
+[2025-11-21 17:38:02] Arguments: {'epochs': 2, 'batch_size': 4, 'samples_per_image': 2, 'lr': 0.0001, 'weight_decay': 0.05, 'embed_dim': 256, 'depth': 6, 'num_heads': 8, 'dropout': 0.1, 'data_path': 'data/processed_data.npz', 'min_lines': 10, 'num_workers': 0, 'num_threads': None, 'output_dir': 'outputs', 'resume': False, 'seed': 42}
+[2025-11-21 17:38:02] Using default PyTorch threads: 10
+[2025-11-21 17:38:02] Using device: cpu
+[2025-11-21 17:38:02] Loading dataset from data/processed_data.npz...
+[2025-11-21 17:38:03] Total dataset: 18932 images
+[2025-11-21 17:38:03] Image size: 128 x 128
+[2025-11-21 17:38:03] Number of classes: 6
+[2025-11-21 17:38:06] Train set: 13259 images
+[2025-11-21 17:38:06] Val set: 2833 images
+[2025-11-21 17:38:06] Test set: 2840 images

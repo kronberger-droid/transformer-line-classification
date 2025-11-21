@@ -105,24 +105,25 @@
           '';
         };
 
-        # Minimal environment for quick experiments
+        # Minimal environment for training (no jupyter)
         minimal = pkgs.mkShell {
           buildInputs = [
             (pkgs.python3.withPackages (python-pkgs: with python-pkgs; [
-              jupyter
-              jupytext
-              notebook
               torch
+              torchvision
               numpy
-              matplotlib
+              scipy
               scikit-learn
+              matplotlib
+              seaborn
+              tqdm
               h5py
             ]))
           ];
 
           shellHook = ''
-            echo "Minimal Jupyter environment loaded"
-            echo "Run: jupyter notebook"
+            echo "Minimal training environment loaded"
+            echo "Run: python train.py --help"
           '';
         };
       };
